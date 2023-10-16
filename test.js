@@ -1,8 +1,11 @@
-const SCENE_DD = {
-    gong_zuo_tai: '工作台',
-    kao_qin: '考勤打卡',
-    shang_ban: '上班打卡',
-    xia_ban: '下班打卡',
+const KEY_WORD = {
+    StopApp: '强行停止',
+
+    DingDing: '钉钉',
+    GongZuoTai: '工作台',
+    KaoQin: '考勤打卡',
+    Daka: '班打卡',
+    Success: '打卡成功'
 }
 
 const MAIL_CONFIG = {
@@ -20,19 +23,37 @@ const SCREEN_PASSWORD = '827997';
 function main() {
     //检查 autoxjs 无障碍权限是否启用
     auto();
-    //解锁
+    //唤醒
     weakup();
-    //如果钉钉正在运行、先退出
-    // todo
-    //打开应用
+    //准备
+    prepare();
+    //开始
+    start();
+}
+
+/**准备 */
+function prepare() {
+    home();
+    sleep(500);
+    openAppSetting(getPackageName('钉钉'));
+    waitText(KEY_WORD.StopApp);
+    click(KEY_WORD.StopApp);
+    sleep(1000);
+    click(KEY_WORD.StopApp, 1);
+    sleep(500);
+    home();
+    sleep(1000);
+}
+
+/**开始 */
+function start() {
     if (app.launchApp('钉钉')) {
-        textContains(SCENE_DD.gong_zuo_tai).waitFor();
+        waitText(KEY_WORD.GongZuoTai);
         signin_dd();
-        textContains('').waitFor();
+        waitText(KEY_WORD.Success);
         sendEmail('自动打卡成功!');
     } else {
-        //重试
-        main();
+        retry();
     }
 }
 
@@ -47,24 +68,23 @@ function weakup() {
         swipe(500, 10, 500, 1000, 500);
         sleep(500);
         if (SCREEN_PASSWORD) {
-            const password = '827997'.split('');
+            const password = SCREEN_PASSWORD.split('');
             password.forEach(number => {
                 click(number)
             });
         }
     }
-} 
+}
 
 /**
  * 钉钉打卡
  */
 function signin_dd() {
-    console.log('action start...');
-    enterScene(SCENE_DD.gong_zuo_tai, SCENE_DD.kao_qin);
-    const str = '班打卡';
-    enterScene(SCENE_DD.kao_qin, str);
-    click(str);
-    console.log('action end...');
+    console.log('打卡开始...');
+    enterScene(KEY_WORD.GongZuoTai, KEY_WORD.KaoQin);
+    enterScene(KEY_WORD.KaoQin, KEY_WORD.Daka);
+    click(KEY_WORD.Daka);
+    console.log('打卡操作结束...');
 }
 
 /**
@@ -82,7 +102,7 @@ function enterScene(entContent, waitContent) {
     if (!waitContent) {
         return;
     }
-    textContains(waitContent).waitFor();
+    waitText(waitContent);
 }
 
 /**
@@ -102,7 +122,55 @@ function sendEmail(title, content) {
       }
     }
     http.postJson(MAIL_CONFIG.url, body, null, (res) => {
-        console.log('邮件接口返回: ', res);
+        // console.log('邮件接口返回: ', res);
     });
 }
+
+/**开启一个子线程 */
+function thread2(action) {
+    return threads.start(action);
+}
+
+let MAX_RETRY = 5;
+/**
+ * 行为超时
+ */
+function retry() {
+    if (MAX_RETRY > 0) {
+        console.log('重试: ', MAX_RETRY);
+        MAX_RETRY--;
+        main();
+    } else {
+        sendEmail('打卡失败', '重试5次, 退出脚本!');
+        threads.shutDownAll();
+        exit();
+    }
+}
+
+/**
+ * 等待指定文本
+ * 默认时长 20s
+ */
+function waitText(str) {
+    let cd = 20, timer, thread, mainThread;
+    const stop = () => {
+        retry();
+        thread.interrupt();
+        mainThread.interrupt();
+    }
+    const cutdown = () => {
+        timer = setInterval(() => {
+            console.log(`等待${str}, ${cd}s`);
+            cd --;
+            cd <= 0 && stop();
+        }, 1000)
+    }
+    thread = thread2(cutdown);
+    mainThread = threads.currentThread();
+    textContains(str).waitFor();
+
+    thread.clearInterval(timer);
+    thread.interrupt();
+}
+
 main();
