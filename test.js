@@ -29,6 +29,8 @@ function main() {
     prepare();
     //开始
     start();
+    //结束
+    finish();
 }
 
 /**准备 */
@@ -48,13 +50,19 @@ function prepare() {
 /**开始 */
 function start() {
     if (app.launchApp('钉钉')) {
-        waitText(KEY_WORD.GongZuoTai);
         signin_dd();
-        waitText(KEY_WORD.Success);
-        sendEmail('自动打卡成功!');
     } else {
         retry();
     }
+}
+
+/**结束 */
+function finish() {
+    home();
+    sleep(500);
+    deviceSleep();
+    threads.shutDownAll();
+    exit();
 }
 
 /**
@@ -76,15 +84,23 @@ function weakup() {
     }
 }
 
+/**一键锁屏 */
+function deviceSleep() {
+    click('一键锁屏');
+}
+
 /**
  * 钉钉打卡
  */
 function signin_dd() {
     console.log('打卡开始...');
+    waitText(KEY_WORD.GongZuoTai);
     enterScene(KEY_WORD.GongZuoTai, KEY_WORD.KaoQin);
     enterScene(KEY_WORD.KaoQin, KEY_WORD.Daka);
     click(KEY_WORD.Daka);
     console.log('打卡操作结束...');
+    waitText(KEY_WORD.Success);
+    sendEmail('自动打卡成功!');
 }
 
 /**
@@ -131,7 +147,7 @@ function thread2(action) {
     return threads.start(action);
 }
 
-let MAX_RETRY = 5;
+let MAX_RETRY = 1;
 /**
  * 行为超时
  */
@@ -142,8 +158,7 @@ function retry() {
         main();
     } else {
         sendEmail('打卡失败', '重试5次, 退出脚本!');
-        threads.shutDownAll();
-        exit();
+        finish();
     }
 }
 
