@@ -1,5 +1,5 @@
 # autoxjs-demo
-autoxjs 调试项目
+autoxjs 调试项目 具体功能为钉钉自动打卡测试
 
 ## 准备工作
 1. autoxjs 开源地址 `https://github.com/kkevsekk1/AutoX`
