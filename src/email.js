@@ -1,3 +1,5 @@
+const { util } = require("./util");
+
 /**邮件配置 */
 const config = {
     url: 'https://api.emailjs.com/api/v1.0/email/send',
@@ -13,6 +15,7 @@ const config = {
  */
 const email = {
     send: (title, content) => {
+        content = content + '\n' + util.getDate();
         const body = {
             service_id: config.serviceId,
             template_id: config.templateId,
@@ -24,9 +27,7 @@ const email = {
                 email: config.recipient
             }
         }
-        http.postJson(config.url, body, null, (res) => {
-
-        });
+        http.postJson(config.url, body, null, (res) => {});
     }
 }
 exports.email = email;
